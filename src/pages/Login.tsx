@@ -1,4 +1,3 @@
-// src/pages/Login.tsx
 import { useState, type SubmitEvent, type ChangeEvent } from "react";
 import axios from "axios";
 import { getStateInstance } from "@/api/greenApi";
@@ -14,7 +13,6 @@ interface FormState {
   apiTokenInstance: string;
 }
 
-// Дефолтный URL — используется, если пользователь не указал свой
 const DEFAULT_API_URL = "https://api.green-api.com";
 
 const INITIAL_FORM: FormState = {

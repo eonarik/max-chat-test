@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { Chat, ChatMessage, GreenApiChat } from "@/types/greenApi";
 import { formatChatId, extractPhone } from "@/utils/format";
+import { useActiveChat } from "./useActiveChat";
 
 const STORAGE_KEY = "green_api_chats";
 
@@ -13,7 +14,6 @@ const loadChats = (): Chat[] => {
   }
 };
 
-/** Результат создания чата */
 export interface CreateChatResult {
   ok: boolean;
   error?: string;
@@ -22,43 +22,41 @@ export interface CreateChatResult {
 
 export const useChats = () => {
   const [chats, setChats] = useState<Chat[]>(loadChats);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+
+  const { activeChatId, setActiveChatId } = useActiveChat();
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
   }, [chats]);
 
-  const createChat = useCallback((phone: string): CreateChatResult => {
-    const clean = phone.replace(/\D/g, "");
+  const createChat = useCallback(
+    (phone: string): CreateChatResult => {
+      const clean = phone.replace(/\D/g, "");
 
-    if (!clean) {
-      return { ok: false, error: "Введите номер телефона" };
-    }
-    if (clean.length < 10) {
-      return { ok: false, error: "Номер слишком короткий (минимум 10 цифр)" };
-    }
-    if (clean.length > 15) {
-      return { ok: false, error: "Номер слишком длинный (максимум 15 цифр)" };
-    }
+      if (!clean) return { ok: false, error: "Введите номер телефона" };
+      if (clean.length < 10 || clean.length > 15) {
+        return { ok: false, error: "Неверная длина номера" };
+      }
 
-    const chatId = formatChatId(clean);
+      const existing = chats.find(
+        (c) => String(c.phoneNumber) === clean || c.phone === clean,
+      );
 
-    setChats((prev) => {
-      if (prev.find((c) => c.id === chatId)) return prev;
-      return [
-        {
-          id: chatId,
-          phone: clean,
-          type: "user",
-          messages: [],
-        },
+      if (existing) {
+        setActiveChatId(existing.id);
+        return { ok: true, chatId: existing.id };
+      }
+
+      const chatId = formatChatId(clean);
+      setChats((prev) => [
+        { id: chatId, phone: clean, phoneNumber: Number(clean), messages: [] },
         ...prev,
-      ];
-    });
-
-    setActiveChatId(chatId);
-    return { ok: true, chatId };
-  }, []);
+      ]);
+      setActiveChatId(chatId);
+      return { ok: true, chatId };
+    },
+    [chats],
+  );
 
   const ensureChat = useCallback((chatId: string) => {
     setChats((prev) => {
@@ -137,9 +135,6 @@ export const useChats = () => {
     [],
   );
 
-  /**
-   * Обновляет статус конкретного сообщения.
-   */
   const updateMessageStatus = useCallback(
     (chatId: string, messageId: string, status: ChatMessage["status"]) => {
       setChats((prev) =>
@@ -149,6 +144,24 @@ export const useChats = () => {
                 ...chat,
                 messages: chat.messages.map((m) =>
                   m.id === messageId ? { ...m, status } : m,
+                ),
+              }
+            : chat,
+        ),
+      );
+    },
+    [],
+  );
+
+  const replaceMessageId = useCallback(
+    (chatId: string, oldId: string, newId: string) => {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
+            ? {
+                ...chat,
+                messages: chat.messages.map((m) =>
+                  m.id === oldId ? { ...m, id: newId } : m,
                 ),
               }
             : chat,
@@ -171,5 +184,6 @@ export const useChats = () => {
     mergeChats,
     updateMessageStatus,
     ensureChat,
+    replaceMessageId,
   };
 };

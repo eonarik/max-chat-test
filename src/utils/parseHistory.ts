@@ -1,20 +1,58 @@
 import type { ChatHistoryItem, ChatMessage } from "@/types/greenApi";
 
-/**
- * Преобразует историю с сервера во внутренний формат ChatMessage.
- */
+const PLACEHOLDERS: Record<string, string> = {
+  imageMessage: "[Изображение]",
+  videoMessage: "[Видео]",
+  audioMessage: "[Голосовое сообщение]",
+  documentMessage: "[Документ]",
+  locationMessage: "[Геолокация]",
+  contactMessage: "[Контакт]",
+  stickerMessage: "[Стикер]",
+  reactionMessage: "[Реакция]",
+  pollMessage: "[Опрос]",
+};
+
+const extractHistoryText = (item: ChatHistoryItem): string | null => {
+  if (!item.typeMessage) return null;
+
+  if (item.typeMessage === "extendedTextMessage") {
+    return item.extendedTextMessage?.text ?? item.textMessage ?? null;
+  }
+
+  if (item.typeMessage === "textMessage") {
+    return item.textMessage ?? null;
+  }
+
+  const placeholder = PLACEHOLDERS[item.typeMessage];
+  if (placeholder) return placeholder;
+
+  return "[Unknown Message]";
+};
+
+const parseStatus = (
+  statusMessage: string | undefined,
+): ChatMessage["status"] => {
+  if (!statusMessage) return undefined;
+  if (statusMessage === "read") return "read";
+  if (statusMessage === "delivered") return "delivered";
+  if (statusMessage === "sent") return "sent";
+  if (statusMessage === "failed" || statusMessage === "noAccount") {
+    return "error";
+  }
+  return undefined;
+};
+
 export const parseHistory = (history: ChatHistoryItem[]): ChatMessage[] => {
-  return (
-    history
-      .filter((item) => item.typeMessage === "textMessage" && item.textMessage)
-      .map((item) => ({
-        id: item.idMessage,
-        chatId: item.chatId,
-        text: item.textMessage!,
-        timestamp: item.timestamp,
-        isOutgoing: item.type === "outgoing",
-      }))
-      // GREEN-API возвращает историю в порядке "от новых к старым" — переворачиваем
-      .reverse()
-  );
+  return history
+    .filter((item) => extractHistoryText(item) !== null)
+    .map((item) => ({
+      id: item.idMessage,
+      chatId: item.chatId,
+      text: extractHistoryText(item)!,
+      timestamp: item.timestamp,
+      isOutgoing: item.type === "outgoing",
+      status:
+        item.type === "outgoing" ? parseStatus(item.statusMessage) : undefined,
+    }))
+    .reverse();
 };

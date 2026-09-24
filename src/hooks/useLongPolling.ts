@@ -10,9 +10,7 @@ interface UseLongPollingOptions {
   onNotification: (notification: ReceiveNotificationResponse) => void;
 }
 
-/** Минимальный интервал между запросами (мс) */
 const MIN_INTERVAL_MS = 1500;
-/** Пауза при ошибке (мс) */
 const ERROR_DELAY_MS = 3000;
 
 export const useLongPolling = ({
@@ -21,17 +19,15 @@ export const useLongPolling = ({
   enabled,
   onNotification,
 }: UseLongPollingOptions) => {
-  // Ref для колбэка, чтобы цикл не перезапускался при его изменении
   const onNotificationRef = useRef(onNotification);
 
   useEffect(() => {
     onNotificationRef.current = onNotification;
   }, [onNotification]);
 
-  // Защита от двойного запуска в StrictMode
   const isRunningRef = useRef(false);
 
-  const deletedReceiptsRef = useRef<Set<number>>(new Set());
+  const lastDeletedReceiptRef = useRef(0);
 
   useEffect(() => {
     if (!enabled || !apiClient) return;
@@ -58,8 +54,9 @@ export const useLongPolling = ({
           if (notification) {
             onNotificationRef.current(notification);
 
-            if (!deletedReceiptsRef.current.has(notification.receiptId)) {
-              deletedReceiptsRef.current.add(notification.receiptId);
+            // Удаляем только если receiptId больше максимального удалённого
+            if (notification.receiptId > lastDeletedReceiptRef.current) {
+              lastDeletedReceiptRef.current = notification.receiptId;
               try {
                 await deleteNotification(
                   apiClient,
@@ -78,7 +75,6 @@ export const useLongPolling = ({
           continue;
         }
 
-        // Throttle: даже если сервер ответил мгновенно — держим паузу
         const elapsed = Date.now() - startedAt;
         if (elapsed < MIN_INTERVAL_MS) {
           await sleep(MIN_INTERVAL_MS - elapsed);

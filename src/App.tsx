@@ -2,6 +2,7 @@ import { useAuth } from "./hooks/useAuth";
 
 import Login from "./pages/Login";
 import Chat from "./pages/Chat";
+import { Sprite } from "./components/Sprite";
 
 function App() {
   const { isAuthenticated, login, logout, apiClient, credentials } = useAuth();
@@ -16,6 +17,7 @@ function App() {
 
   return (
     <div className="h-screen w-screen bg-gray-100 overflow-hidden">
+      <Sprite />
       <Chat apiClient={apiClient} credentials={credentials} onLogout={logout} />
     </div>
   );

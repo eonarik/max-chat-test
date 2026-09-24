@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import svgr from "vite-plugin-svgr";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,20 +8,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), svgr()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  server: {
-    proxy: {
-      "/green-api": {
-        target: "https://3100.api.green-api.com",
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/green-api/, ""),
-        secure: false,
-      },
     },
   },
 });

@@ -1,4 +1,3 @@
-// src/api/greenApi.ts
 import axios, { type AxiosInstance } from "axios";
 import type {
   Credentials,
@@ -12,14 +11,10 @@ import type {
 
 export const createApiClient = (credentials: Credentials): AxiosInstance => {
   return axios.create({
-    baseURL: `/green-api/waInstance${credentials.idInstance}`,
+    baseURL: `${credentials.apiUrl}/waInstance${credentials.idInstance}`,
   });
 };
 
-/**
- * Проверка валидности токенов.
- * GET /waInstance{id}/getStateInstance/{token}
- */
 export const getStateInstance = async (
   credentials: Credentials,
 ): Promise<GetStateInstanceResponse> => {
@@ -30,10 +25,6 @@ export const getStateInstance = async (
   return data;
 };
 
-/**
- * Отправка текстового сообщения.
- * POST /waInstance{id}/sendMessage/{token}
- */
 export const sendMessage = async (
   client: AxiosInstance,
   apiTokenInstance: string,
@@ -54,10 +45,6 @@ export const sendMessage = async (
   }
 };
 
-/**
- * Получение входящих уведомлений (Long Polling).
- * GET /waInstance{id}/receiveNotification/{token}
- */
 export const receiveNotification = async (
   client: AxiosInstance,
   apiTokenInstance: string,
@@ -76,10 +63,6 @@ export const receiveNotification = async (
   }
 };
 
-/**
- * Удаление уведомления из очереди.
- * DELETE /waInstance{id}/deleteNotification/{receiptId}/{token}
- */
 export const deleteNotification = async (
   client: AxiosInstance,
   apiTokenInstance: string,
@@ -91,10 +74,6 @@ export const deleteNotification = async (
   return data;
 };
 
-/**
- * Получение списка чатов.
- * GET /waInstance{id}/getChats/{token}
- */
 export const getChats = async (
   client: AxiosInstance,
   apiTokenInstance: string,
@@ -105,10 +84,6 @@ export const getChats = async (
   return data;
 };
 
-/**
- * Получение истории сообщений чата.
- * POST /waInstance{id}/getChatHistory/{token}
- */
 export const getChatHistory = async (
   client: AxiosInstance,
   apiTokenInstance: string,
@@ -118,6 +93,18 @@ export const getChatHistory = async (
   const { data } = await client.post<ChatHistoryItem[]>(
     `/getChatHistory/${apiTokenInstance}`,
     { chatId, count },
+  );
+  return data;
+};
+
+export const readChat = async (
+  client: AxiosInstance,
+  apiTokenInstance: string,
+  chatId: string,
+): Promise<{ setRead: boolean }> => {
+  const { data } = await client.post<{ setRead: boolean }>(
+    `/readChat/${apiTokenInstance}`,
+    { chatId },
   );
   return data;
 };

@@ -35,6 +35,13 @@ export interface ReceiveNotificationResponse {
       textMessageData?: {
         textMessage: string;
       };
+      extendedTextMessageData?: {
+        text: string;
+        description?: string;
+        title?: string;
+        previewType?: string;
+      };
+      [key: string]: unknown;
     };
   };
 }
@@ -49,15 +56,7 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   isOutgoing: boolean;
-  status?: "sent" | "delivered" | "error";
-}
-
-export interface Chat {
-  id: string;
-  phone: string;
-  messages: ChatMessage[];
-  lastMessage?: string;
-  lastActivity?: number;
+  status?: "read" | "sent" | "delivered" | "error";
 }
 
 export interface GetStateInstanceResponse {
@@ -93,7 +92,18 @@ export interface ChatHistoryItem {
   type: "incoming" | "outgoing";
   typeMessage: string;
   textMessage?: string;
+  extendedTextMessage?: {
+    text: string;
+    description?: string;
+    title?: string;
+    previewType?: string;
+  };
+  statusMessage?: string;
   chatId: string;
+  chatType?: string;
   senderId?: string;
   senderName?: string;
+  sendByApi?: boolean;
+  isEdited?: boolean;
+  isDeleted?: boolean;
 }
