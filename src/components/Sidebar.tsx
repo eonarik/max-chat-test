@@ -1,13 +1,13 @@
-// src/components/Sidebar.tsx
-import { useState, type SubmitEvent } from "react";
+import { useState, type SubmitEvent, type ChangeEvent } from "react";
 import type { Chat } from "@/types/greenApi";
+import type { CreateChatResult } from "@/hooks/useChats";
 import { extractPhone, formatTime } from "@/utils/format";
 
 interface SidebarProps {
   chats: Chat[];
   activeChatId: string | null;
   onSelectChat: (chatId: string) => void;
-  onCreateChat: (phone: string) => void;
+  onCreateChat: (phone: string) => CreateChatResult;
   onLogout: () => void;
   onRefresh: () => void;
   isLoading: boolean;
@@ -26,14 +26,37 @@ function Sidebar({
 }: SidebarProps) {
   const [phone, setPhone] = useState("");
   const [showNewChat, setShowNewChat] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const cleanPhone = phone.replace(/\D/g, "");
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setPhone(e.target.value);
+    if (formError) setFormError(null);
+  };
 
   const handleCreate = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const clean = phone.replace(/\D/g, "");
-    if (clean.length < 10) return;
-    onCreateChat(phone);
+    const hasLetters = /[a-zA-Zа-яА-Я]/.test(phone);
+    if (hasLetters) {
+      setFormError("Номер не должен содержать буквы");
+      return;
+    }
+
+    const result = onCreateChat(phone);
+    if (!result.ok) {
+      setFormError(result.error ?? "Не удалось создать чат");
+      return;
+    }
     setPhone("");
+    setFormError(null);
     setShowNewChat(false);
+  };
+
+  const handleToggleForm = () => {
+    setShowNewChat((s) => !s);
+    setPhone("");
+    setFormError(null);
   };
 
   const displayName = (chat: Chat) => chat.name || `+${extractPhone(chat.id)}`;
@@ -52,11 +75,11 @@ function Sidebar({
             ↻
           </button>
           <button
-            onClick={() => setShowNewChat((s) => !s)}
-            className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors"
-            title="Новый чат"
+            onClick={handleToggleForm}
+            className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors text-lg leading-none"
+            title={showNewChat ? "Отменить" : "Новый чат"}
           >
-            +
+            {showNewChat ? "×" : "+"}
           </button>
         </div>
       </div>
@@ -66,17 +89,24 @@ function Sidebar({
           onSubmit={handleCreate}
           className="p-3 border-b border-gray-200 bg-gray-50"
         >
+          <label className="block text-xs text-gray-500 mb-1">
+            Номер телефона получателя
+          </label>
           <input
             type="tel"
             autoFocus
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="79991234567"
+            onChange={handleChange}
+            placeholder="+7 999 123-45-67"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
           />
+          {formError && (
+            <p className="mt-1 text-xs text-red-600">{formError}</p>
+          )}
           <button
             type="submit"
-            className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm py-2 rounded-lg transition-colors"
+            disabled={cleanPhone.length < 10}
+            className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm py-2 rounded-lg transition-colors"
           >
             Создать чат
           </button>

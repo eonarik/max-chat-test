@@ -21,23 +21,27 @@ export const useLongPolling = ({
   enabled,
   onNotification,
 }: UseLongPollingOptions) => {
+  // Ref для колбэка, чтобы цикл не перезапускался при его изменении
   const onNotificationRef = useRef(onNotification);
 
   useEffect(() => {
     onNotificationRef.current = onNotification;
   }, [onNotification]);
 
+  // Защита от двойного запуска в StrictMode
+  const isRunningRef = useRef(false);
+
+  const deletedReceiptsRef = useRef<Set<number>>(new Set());
+
   useEffect(() => {
     if (!enabled || !apiClient) return;
+    if (isRunningRef.current) return;
 
+    isRunningRef.current = true;
     let cancelled = false;
 
     const sleep = (ms: number) =>
-      new Promise((resolve) => {
-        const timer = setTimeout(resolve, ms);
-        // очистка таймера при отмене
-        if (cancelled) clearTimeout(timer);
-      });
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
 
     const poll = async () => {
       while (!cancelled) {
@@ -53,14 +57,18 @@ export const useLongPolling = ({
 
           if (notification) {
             onNotificationRef.current(notification);
-            try {
-              await deleteNotification(
-                apiClient,
-                apiTokenInstance,
-                notification.receiptId,
-              );
-            } catch (err) {
-              console.error("Ошибка удаления уведомления:", err);
+
+            if (!deletedReceiptsRef.current.has(notification.receiptId)) {
+              deletedReceiptsRef.current.add(notification.receiptId);
+              try {
+                await deleteNotification(
+                  apiClient,
+                  apiTokenInstance,
+                  notification.receiptId,
+                );
+              } catch (err) {
+                console.error("Ошибка удаления уведомления:", err);
+              }
             }
           }
         } catch (err) {
@@ -70,7 +78,7 @@ export const useLongPolling = ({
           continue;
         }
 
-        // Throttle: гарантируем минимальный интервал между запросами
+        // Throttle: даже если сервер ответил мгновенно — держим паузу
         const elapsed = Date.now() - startedAt;
         if (elapsed < MIN_INTERVAL_MS) {
           await sleep(MIN_INTERVAL_MS - elapsed);
@@ -82,6 +90,7 @@ export const useLongPolling = ({
 
     return () => {
       cancelled = true;
+      isRunningRef.current = false;
     };
   }, [apiClient, apiTokenInstance, enabled]);
 };

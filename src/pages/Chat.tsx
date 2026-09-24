@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AxiosInstance } from "axios";
 import axios from "axios";
-import type { Credentials, ChatMessage } from "@/types/greenApi";
+import type {
+  Credentials,
+  ChatMessage,
+  ReceiveNotificationResponse,
+} from "@/types/greenApi";
 import { useChats } from "@/hooks/useChats";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { sendMessage, getChats } from "@/api/greenApi";
 import Sidebar from "@/components/Sidebar";
 import ChatWindow from "@/components/ChatWindow";
+import { parseNotification } from "@/utils/parseNotification";
+import { useLongPolling } from "@/hooks/useLongPolling";
 
 interface ChatProps {
   apiClient: AxiosInstance;
@@ -24,6 +30,8 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
     addMessage,
     mergeChats,
     setChatMessages,
+    updateMessageStatus,
+    ensureChat,
   } = useChats();
 
   const [isLoadingChats, setIsLoadingChats] = useState(false);
@@ -75,6 +83,26 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
     loadChats();
   }, [loadChats]);
 
+  /** Обработка входящих уведомлений */
+  const handleNotification = useCallback(
+    (notification: ReceiveNotificationResponse) => {
+      const parsed = parseNotification(notification);
+      if (!parsed) return;
+
+      ensureChat(parsed.chatId);
+      addMessage(parsed.chatId, parsed.message);
+    },
+    [ensureChat, addMessage],
+  );
+
+  // Запуск Long Polling
+  useLongPolling({
+    apiClient,
+    apiTokenInstance: credentials.apiTokenInstance,
+    enabled: true,
+    onNotification: handleNotification,
+  });
+
   /** Выбор чата: установка активного + загрузка истории */
   const handleSelectChat = useCallback(
     (chatId: string) => {
@@ -93,24 +121,55 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
     if (!activeChat) return;
 
     const tempId = crypto.randomUUID();
-    addMessage(activeChat.id, {
+    const chatId = activeChat.id;
+
+    // 1. Оптимистично показываем сообщение с временным id и статусом "sent"
+    addMessage(chatId, {
       id: tempId,
-      chatId: activeChat.id,
+      chatId,
       text,
       timestamp: Math.floor(Date.now() / 1000),
       isOutgoing: true,
       status: "sent",
     });
 
+    // 2. Отправляем на сервер
+    try {
+      const result = await sendMessage(
+        apiClient,
+        credentials.apiTokenInstance,
+        chatId,
+        text,
+      );
+
+      // 3. Успех. Можно заменить id на реальный (idMessage от сервера)
+      //    или просто пометить как "sent" (уже sent, но подтвердим).
+      if (result?.idMessage) {
+        // при желании — заменить tempId на result.idMessage
+      }
+    } catch (err) {
+      console.error("Не удалось отправить сообщение:", err);
+      // 4. Ошибка — помечаем сообщение
+      updateMessageStatus(chatId, tempId, "error");
+    }
+  };
+
+  /** Повторная отправка ошибочного сообщения */
+  const handleRetryMessage = async (message: ChatMessage) => {
+    if (!activeChat) return;
+
+    updateMessageStatus(activeChat.id, message.id, "sent");
+
     try {
       await sendMessage(
         apiClient,
         credentials.apiTokenInstance,
         activeChat.id,
-        text,
+        message.text,
       );
     } catch (err) {
-      console.error("Не удалось отправить сообщение:", err);
+      console.error("Повторная отправка не удалась:", err);
+      updateMessageStatus(activeChat.id, message.id, "error");
     }
   };
 
@@ -129,6 +188,7 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
       <ChatWindow
         chat={activeChat}
         onSendMessage={handleSendMessage}
+        onRetryMessage={handleRetryMessage}
         isLoadingHistory={isLoadingHistory}
       />
     </div>

@@ -13,6 +13,13 @@ const loadChats = (): Chat[] => {
   }
 };
 
+/** Результат создания чата */
+export interface CreateChatResult {
+  ok: boolean;
+  error?: string;
+  chatId?: string;
+}
+
 export const useChats = () => {
   const [chats, setChats] = useState<Chat[]>(loadChats);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -21,17 +28,51 @@ export const useChats = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
   }, [chats]);
 
-  const createChat = useCallback((phone: string) => {
-    const chatId = formatChatId(phone);
+  const createChat = useCallback((phone: string): CreateChatResult => {
+    const clean = phone.replace(/\D/g, "");
+
+    if (!clean) {
+      return { ok: false, error: "Введите номер телефона" };
+    }
+    if (clean.length < 10) {
+      return { ok: false, error: "Номер слишком короткий (минимум 10 цифр)" };
+    }
+    if (clean.length > 15) {
+      return { ok: false, error: "Номер слишком длинный (максимум 15 цифр)" };
+    }
+
+    const chatId = formatChatId(clean);
+
     setChats((prev) => {
-      const existing = prev.find((c) => c.id === chatId);
-      if (existing) return prev;
+      if (prev.find((c) => c.id === chatId)) return prev;
       return [
-        { id: chatId, phone: extractPhone(chatId), messages: [] },
+        {
+          id: chatId,
+          phone: clean,
+          type: "user",
+          messages: [],
+        },
         ...prev,
       ];
     });
+
     setActiveChatId(chatId);
+    return { ok: true, chatId };
+  }, []);
+
+  const ensureChat = useCallback((chatId: string) => {
+    setChats((prev) => {
+      if (prev.find((c) => c.id === chatId)) return prev;
+      return [
+        {
+          id: chatId,
+          phone: extractPhone(chatId),
+          type: "user",
+          messages: [],
+        },
+        ...prev,
+      ];
+    });
   }, []);
 
   const addMessage = useCallback((chatId: string, message: ChatMessage) => {
@@ -49,12 +90,6 @@ export const useChats = () => {
     );
   }, []);
 
-  /**
-   * Объединяет чаты с сервера с локальным состоянием.
-   * - Новые чаты добавляются.
-   * - Существующие сохраняют свою историю сообщений.
-   * - Локальные чаты, которых нет на сервере, остаются.
-   */
   const mergeChats = useCallback((remoteChats: GreenApiChat[]) => {
     setChats((prev) => {
       const byId = new Map(prev.map((c) => [c.id, c]));
@@ -62,7 +97,6 @@ export const useChats = () => {
       for (const remote of remoteChats) {
         const existing = byId.get(remote.chatId);
         if (existing) {
-          // Обновляем имя, если оно было пустым
           byId.set(remote.chatId, {
             ...existing,
             name: remote.name || existing.name,
@@ -70,7 +104,6 @@ export const useChats = () => {
             phoneNumber: remote.phoneNumber || existing.phoneNumber,
           });
         } else {
-          // Новый чат с сервера
           byId.set(remote.chatId, {
             id: remote.chatId,
             phone: extractPhone(remote.chatId),
@@ -104,6 +137,27 @@ export const useChats = () => {
     [],
   );
 
+  /**
+   * Обновляет статус конкретного сообщения.
+   */
+  const updateMessageStatus = useCallback(
+    (chatId: string, messageId: string, status: ChatMessage["status"]) => {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
+            ? {
+                ...chat,
+                messages: chat.messages.map((m) =>
+                  m.id === messageId ? { ...m, status } : m,
+                ),
+              }
+            : chat,
+        ),
+      );
+    },
+    [],
+  );
+
   const activeChat = chats.find((c) => c.id === activeChatId) ?? null;
 
   return {
@@ -115,5 +169,7 @@ export const useChats = () => {
     createChat,
     addMessage,
     mergeChats,
+    updateMessageStatus,
+    ensureChat,
   };
 };

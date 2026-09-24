@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, type SubmitEvent } from "react";
-import type { Chat } from "@/types/greenApi";
+import type { Chat, ChatMessage } from "@/types/greenApi";
 import { extractPhone, formatTime } from "@/utils/format";
 
 interface ChatWindowProps {
   chat: Chat | null;
   onSendMessage: (text: string) => void;
+  onRetryMessage: (message: ChatMessage) => void;
   isLoadingHistory?: boolean;
 }
 
@@ -12,6 +13,7 @@ function ChatWindow({
   chat,
   isLoadingHistory,
   onSendMessage,
+  onRetryMessage,
 }: ChatWindowProps) {
   const [text, setText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -54,36 +56,48 @@ function ChatWindow({
             Сообщений пока нет. Напишите первым!
           </p>
         ) : (
-          chat.messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.isOutgoing ? "justify-end" : "justify-start"}`}
-            >
+          chat.messages.map((msg) => {
+            const hasError = msg.status === "error";
+
+            return (
               <div
-                className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                  msg.isOutgoing
-                    ? "bg-emerald-500 text-white rounded-br-sm"
-                    : "bg-white text-gray-800 rounded-bl-sm shadow-sm"
-                }`}
+                key={msg.id}
+                className={`flex ${msg.isOutgoing ? "justify-end" : "justify-start"}`}
               >
-                <p className="text-sm whitespace-pre-wrap break-words">
-                  {msg.text}
-                </p>
-                <p
-                  className={`text-[10px] mt-1 text-right ${
-                    msg.isOutgoing ? "text-emerald-100" : "text-gray-400"
+                <div
+                  onClick={hasError ? () => onRetryMessage(msg) : undefined}
+                  title={hasError ? "Нажмите, чтобы повторить" : undefined}
+                  className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                    msg.isOutgoing
+                      ? hasError
+                        ? "bg-red-500 text-white rounded-br-sm cursor-pointer"
+                        : "bg-emerald-500 text-white rounded-br-sm"
+                      : "bg-white text-gray-800 rounded-bl-sm shadow-sm"
                   }`}
                 >
-                  {formatTime(msg.timestamp)}
-                </p>
+                  <p className="text-sm whitespace-pre-wrap break-words">
+                    {msg.text}
+                  </p>
+                  <div
+                    className={`flex items-center justify-end gap-1 text-[10px] mt-1 ${
+                      msg.isOutgoing
+                        ? hasError
+                          ? "text-red-100"
+                          : "text-emerald-100"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    <span>{formatTime(msg.timestamp)}</span>
+                    {msg.isOutgoing && <span>{hasError ? "✕" : "✓"}</span>}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <form
         onSubmit={handleSend}
         className="p-4 bg-white border-t border-gray-200 flex gap-2"
