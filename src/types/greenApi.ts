@@ -70,6 +70,7 @@ export interface GetStateInstanceResponse {
 
 export interface Chat {
   id: string;
+  sendId?: string;
   phone: string;
   name?: string;
   type?: "user" | "group" | "channel" | "bot";

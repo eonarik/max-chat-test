@@ -85,32 +85,34 @@ const SidebarHeader: FunctionComponent<SidebarHeaderProps> = ({
         </div>
       </div>
 
-      <form
-        onSubmit={handleCreate}
-        className="px-3 pb-3 border-b border-gray-100"
-      >
-        <label className="block text-xs text-max-text-secondary mb-1">
-          Номер телефона получателя
-        </label>
-        <input
-          type="tel"
-          autoFocus
-          value={phone}
-          onChange={handleChange}
-          placeholder="+7 999 123-45-67"
-          className="w-full px-3 py-2 rounded-lg bg-max-bg-secondary text-detail text-max-text-primary placeholder:text-max-text-secondary focus:outline-none focus:ring-2 focus:ring-max-primary"
-        />
-        {formError && (
-          <p className="mt-1 text-xs text-max-error">{formError}</p>
-        )}
-        <button
-          type="submit"
-          disabled={cleanPhone.length < 10}
-          className="mt-2 w-full py-2 rounded-lg text-detail font-medium bg-max-primary hover:bg-max-primary-hover disabled:bg-gray-300 disabled:cursor-not-allowed text-white transition-colors"
+      {showNewChat && (
+        <form
+          onSubmit={handleCreate}
+          className="px-3 pb-3 border-b border-gray-100"
         >
-          Создать чат
-        </button>
-      </form>
+          <label className="block text-xs text-max-text-secondary mb-1">
+            Номер телефона получателя
+          </label>
+          <input
+            type="tel"
+            autoFocus
+            value={phone}
+            onChange={handleChange}
+            placeholder="+7 999 123-45-67"
+            className="w-full px-3 py-2 rounded-lg bg-max-bg-secondary text-detail text-max-text-primary placeholder:text-max-text-secondary focus:outline-none focus:ring-2 focus:ring-max-primary"
+          />
+          {formError && (
+            <p className="mt-1 text-xs text-max-error">{formError}</p>
+          )}
+          <button
+            type="submit"
+            disabled={cleanPhone.length < 10}
+            className="mt-2 w-full py-2 rounded-lg text-detail font-medium bg-max-primary hover:bg-max-primary-hover disabled:bg-gray-300 disabled:cursor-not-allowed text-white transition-colors"
+          >
+            Создать чат
+          </button>
+        </form>
+      )}
     </>
   );
 };

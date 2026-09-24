@@ -69,7 +69,7 @@ export const deleteNotification = async (
   receiptId: number,
 ): Promise<DeleteNotificationResponse> => {
   const { data } = await client.delete<DeleteNotificationResponse>(
-    `/deleteNotification/${receiptId}/${apiTokenInstance}`,
+    `/deleteNotification/${apiTokenInstance}/${receiptId}`,
   );
   return data;
 };

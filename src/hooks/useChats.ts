@@ -48,8 +48,16 @@ export const useChats = () => {
       }
 
       const chatId = formatChatId(clean);
+      const sendId = `${clean}@c.us`;
+
       setChats((prev) => [
-        { id: chatId, phone: clean, phoneNumber: Number(clean), messages: [] },
+        {
+          id: chatId,
+          sendId,
+          phone: clean,
+          phoneNumber: Number(clean),
+          messages: [],
+        },
         ...prev,
       ]);
       setActiveChatId(chatId);
@@ -58,13 +66,19 @@ export const useChats = () => {
     [chats],
   );
 
-  const ensureChat = useCallback((chatId: string) => {
+  const ensureChat = useCallback((chatId: string, phoneNumber?: number) => {
     setChats((prev) => {
       if (prev.find((c) => c.id === chatId)) return prev;
+
+      const sendId =
+        phoneNumber && phoneNumber > 0 ? `${phoneNumber}@c.us` : undefined;
+
       return [
         {
           id: chatId,
+          sendId,
           phone: extractPhone(chatId),
+          phoneNumber,
           type: "user",
           messages: [],
         },
@@ -94,16 +108,24 @@ export const useChats = () => {
 
       for (const remote of remoteChats) {
         const existing = byId.get(remote.chatId);
+
+        const sendId =
+          remote.phoneNumber && remote.phoneNumber > 0
+            ? `${remote.phoneNumber}@c.us`
+            : undefined;
+
         if (existing) {
           byId.set(remote.chatId, {
             ...existing,
             name: remote.name || existing.name,
             type: remote.type,
             phoneNumber: remote.phoneNumber || existing.phoneNumber,
+            sendId: sendId ?? existing.sendId,
           });
         } else {
           byId.set(remote.chatId, {
             id: remote.chatId,
+            sendId, // ← добавляем
             phone: extractPhone(remote.chatId),
             name: remote.name,
             type: remote.type,
@@ -116,6 +138,34 @@ export const useChats = () => {
       return Array.from(byId.values());
     });
   }, []);
+
+  const mergeMessages = useCallback(
+    (chatId: string, incoming: ChatMessage[]) => {
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id !== chatId) return chat;
+
+          // Сообщения из localStorage + из истории, объединённые по id
+          const byId = new Map<string, ChatMessage>();
+          for (const m of chat.messages) byId.set(m.id, m);
+          for (const m of incoming) byId.set(m.id, m);
+
+          // Сортируем по timestamp
+          const merged = Array.from(byId.values()).sort(
+            (a, b) => a.timestamp - b.timestamp,
+          );
+
+          return {
+            ...chat,
+            messages: merged,
+            lastMessage: merged[merged.length - 1]?.text,
+            lastActivity: merged[merged.length - 1]?.timestamp,
+          };
+        }),
+      );
+    },
+    [],
+  );
 
   const setChatMessages = useCallback(
     (chatId: string, messages: ChatMessage[]) => {
@@ -185,5 +235,6 @@ export const useChats = () => {
     updateMessageStatus,
     ensureChat,
     replaceMessageId,
+    mergeMessages,
   };
 };

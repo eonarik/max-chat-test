@@ -58,7 +58,7 @@ const ChatWindowMessageItem: FunctionComponent<ChatWindowMessageItemProps> = ({
                   aria-hidden="true"
                   width="16"
                   height="16"
-                  className="text-max-read"
+                  className="text-white"
                 >
                   <use href="#icon_status_read" />
                 </svg>
@@ -67,7 +67,7 @@ const ChatWindowMessageItem: FunctionComponent<ChatWindowMessageItemProps> = ({
                   aria-hidden="true"
                   width="16"
                   height="16"
-                  className="text-white/70"
+                  className="text-white"
                 >
                   <use href="#icon_status_delivered" />
                 </svg>

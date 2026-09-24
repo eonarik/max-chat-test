@@ -152,7 +152,7 @@ function Login({ onLogin }: LoginProps) {
             onChange={handleChange}
             disabled={isLoading}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition disabled:bg-gray-100"
-            placeholder="310022745482"
+            placeholder=""
           />
         </div>
 
@@ -172,7 +172,7 @@ function Login({ onLogin }: LoginProps) {
             onChange={handleChange}
             disabled={isLoading}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition disabled:bg-gray-100"
-            placeholder="5ff99f922a0e49a0b7fcdd12e3a8fc64b162a15c178345a4b4"
+            placeholder=""
           />
         </div>
 

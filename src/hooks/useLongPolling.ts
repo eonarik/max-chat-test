@@ -27,8 +27,6 @@ export const useLongPolling = ({
 
   const isRunningRef = useRef(false);
 
-  const lastDeletedReceiptRef = useRef(0);
-
   useEffect(() => {
     if (!enabled || !apiClient) return;
     if (isRunningRef.current) return;
@@ -53,19 +51,14 @@ export const useLongPolling = ({
 
           if (notification) {
             onNotificationRef.current(notification);
-
-            // Удаляем только если receiptId больше максимального удалённого
-            if (notification.receiptId > lastDeletedReceiptRef.current) {
-              lastDeletedReceiptRef.current = notification.receiptId;
-              try {
-                await deleteNotification(
-                  apiClient,
-                  apiTokenInstance,
-                  notification.receiptId,
-                );
-              } catch (err) {
-                console.error("Ошибка удаления уведомления:", err);
-              }
+            try {
+              await deleteNotification(
+                apiClient,
+                apiTokenInstance,
+                notification.receiptId,
+              );
+            } catch (err) {
+              console.error("Ошибка удаления уведомления:", err);
             }
           }
         } catch (err) {

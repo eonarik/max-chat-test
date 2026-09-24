@@ -1,34 +1,24 @@
-// src/utils/parseNotification.ts
 import type {
   ReceiveNotificationResponse,
   ChatMessage,
 } from "@/types/greenApi";
 
-/** Заглушки для не-текстовых типов сообщений */
 const PLACEHOLDERS: Record<string, string> = {
-  imageMessage: "📷 Изображение",
-  videoMessage: "🎥 Видео",
-  audioMessage: "🎤 Голосовое сообщение",
-  documentMessage: "📄 Документ",
-  locationMessage: "📍 Геолокация",
-  contactMessage: "👤 Контакт",
-  stickerMessage: "🩹 Стикер",
-  reactionMessage: "❤️ Реакция",
-  pollMessage: "📊 Опрос",
-  quotedMessage: "💬 Цитата",
+  imageMessage: "[Изображение]",
+  videoMessage: "[Видео]",
+  audioMessage: "[Голосовое сообщение]",
+  documentMessage: "[Документ]",
+  locationMessage: "[Геолокация]",
+  contactMessage: "[Контакт]",
+  stickerMessage: "[Стикер]",
+  reactionMessage: "[Реакция]",
+  pollMessage: "[Опрос]",
+  quotedMessage: "[Цитата]",
 };
 
-/**
- * Извлекает текст из messageData входящего уведомления.
- *
- * ВАЖНО: В уведомлениях структура отличается от истории:
- * - textMessage → textMessageData.textMessage
- * - extendedTextMessage → extendedTextMessageData.text
- */
 const extractIncomingText = (messageData: any): string | null => {
   if (!messageData?.typeMessage) return null;
 
-  // Основной случай для MAX — расширенное текстовое сообщение
   if (messageData.typeMessage === "extendedTextMessage") {
     return (
       messageData.extendedTextMessageData?.text ??
@@ -37,26 +27,19 @@ const extractIncomingText = (messageData: any): string | null => {
     );
   }
 
-  // Fallback — простое текстовое сообщение
   if (messageData.typeMessage === "textMessage") {
     return messageData.textMessageData?.textMessage ?? null;
   }
 
-  // Заглушка для известных не-текстовых типов
   const placeholder = PLACEHOLDERS[messageData.typeMessage];
   if (placeholder) return placeholder;
 
-  // Неизвестный тип
-  return "📎 Вложение";
+  return "[Unknown message]";
 };
 
-/**
- * Преобразует уведомление GREEN-API во внутренний формат ChatMessage.
- * Возвращает null, если уведомление не является входящим сообщением.
- */
 export const parseNotification = (
   notification: ReceiveNotificationResponse,
-): { chatId: string; message: ChatMessage } | null => {
+): { chatId: string; phoneNumber?: number; message: ChatMessage } | null => {
   const { body } = notification;
 
   if (body.typeWebhook !== "incomingMessageReceived") {
@@ -67,9 +50,11 @@ export const parseNotification = (
   if (!text) return null;
 
   const chatId = body.senderData.chatId;
+  const phoneNumber = (body.senderData as any).senderPhoneNumber;
 
   return {
     chatId,
+    phoneNumber: phoneNumber && phoneNumber > 0 ? phoneNumber : undefined,
     message: {
       id: body.idMessage,
       chatId,

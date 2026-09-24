@@ -33,7 +33,7 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
     createChat,
     addMessage,
     mergeChats,
-    setChatMessages,
+    mergeMessages,
     updateMessageStatus,
     ensureChat,
     replaceMessageId,
@@ -45,9 +45,9 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
 
   const handleHistoryLoaded = useCallback(
     (chatId: string, messages: ChatMessage[]) => {
-      setChatMessages(chatId, messages);
+      mergeMessages(chatId, messages);
     },
-    [setChatMessages],
+    [mergeMessages],
   );
 
   const { loadHistory, isLoadingHistory } = useChatHistory({
@@ -103,7 +103,7 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
     (notification: ReceiveNotificationResponse) => {
       const parsed = parseNotification(notification);
       if (parsed) {
-        ensureChat(parsed.chatId);
+        ensureChat(parsed.chatId, parsed.phoneNumber);
         addMessage(parsed.chatId, parsed.message);
 
         if (parsed.chatId === activeChatId) {
@@ -147,6 +147,7 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
 
     const tempId = crypto.randomUUID();
     const chatId = activeChat.id;
+    const sendId = activeChat.sendId ?? activeChat.id;
 
     addMessage(chatId, {
       id: tempId,
@@ -161,7 +162,7 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
       const result = await sendMessage(
         apiClient,
         credentials.apiTokenInstance,
-        chatId,
+        sendId,
         text,
       );
 
@@ -177,13 +178,15 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
   const handleRetryMessage = async (message: ChatMessage) => {
     if (!activeChat) return;
 
+    const sendId = activeChat.sendId ?? activeChat.id;
+
     updateMessageStatus(activeChat.id, message.id, "sent");
 
     try {
       await sendMessage(
         apiClient,
         credentials.apiTokenInstance,
-        activeChat.id,
+        sendId,
         message.text,
       );
     } catch (err) {
