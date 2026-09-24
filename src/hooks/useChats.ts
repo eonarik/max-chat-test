@@ -1,4 +1,3 @@
-// src/hooks/useChats.ts
 import { useState, useCallback, useEffect } from "react";
 import type { Chat, ChatMessage, GreenApiChat } from "@/types/greenApi";
 import { formatChatId, extractPhone } from "@/utils/format";
@@ -87,6 +86,24 @@ export const useChats = () => {
     });
   }, []);
 
+  const setChatMessages = useCallback(
+    (chatId: string, messages: ChatMessage[]) => {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
+            ? {
+                ...chat,
+                messages,
+                lastMessage: messages[messages.length - 1]?.text,
+                lastActivity: messages[messages.length - 1]?.timestamp,
+              }
+            : chat,
+        ),
+      );
+    },
+    [],
+  );
+
   const activeChat = chats.find((c) => c.id === activeChatId) ?? null;
 
   return {
@@ -94,6 +111,7 @@ export const useChats = () => {
     activeChat,
     activeChatId,
     setActiveChatId,
+    setChatMessages,
     createChat,
     addMessage,
     mergeChats,

@@ -1,9 +1,9 @@
-// src/pages/Chat.tsx
 import { useCallback, useEffect, useRef, useState } from "react";
-import axios from "axios";
 import type { AxiosInstance } from "axios";
-import type { Credentials } from "@/types/greenApi";
+import axios from "axios";
+import type { Credentials, ChatMessage } from "@/types/greenApi";
 import { useChats } from "@/hooks/useChats";
+import { useChatHistory } from "@/hooks/useChatHistory";
 import { sendMessage, getChats } from "@/api/greenApi";
 import Sidebar from "@/components/Sidebar";
 import ChatWindow from "@/components/ChatWindow";
@@ -23,16 +23,28 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
     createChat,
     addMessage,
     mergeChats,
+    setChatMessages,
   } = useChats();
 
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [chatsError, setChatsError] = useState<string | null>(null);
-
   const hasLoadedRef = useRef(false);
+
+  const handleHistoryLoaded = useCallback(
+    (chatId: string, messages: ChatMessage[]) => {
+      setChatMessages(chatId, messages);
+    },
+    [setChatMessages],
+  );
+
+  const { loadHistory, isLoadingHistory } = useChatHistory({
+    apiClient,
+    apiTokenInstance: credentials.apiTokenInstance,
+    onLoaded: handleHistoryLoaded,
+  });
 
   const loadChats = useCallback(
     async (force = false) => {
-      // Не грузим повторно, если уже грузили — если только не форсим
       if (hasLoadedRef.current && !force) return;
       hasLoadedRef.current = true;
 
@@ -51,7 +63,7 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
         } else {
           setChatsError("Не удалось загрузить список чатов");
         }
-        hasLoadedRef.current = false; // разрешаем повтор при ошибке
+        hasLoadedRef.current = false;
       } finally {
         setIsLoadingChats(false);
       }
@@ -62,6 +74,20 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
   useEffect(() => {
     loadChats();
   }, [loadChats]);
+
+  /** Выбор чата: установка активного + загрузка истории */
+  const handleSelectChat = useCallback(
+    (chatId: string) => {
+      setActiveChatId(chatId);
+
+      // Не грузим историю повторно, если она уже есть локально
+      const chat = chats.find((c) => c.id === chatId);
+      if (chat && chat.messages.length === 0) {
+        loadHistory(chatId);
+      }
+    },
+    [chats, setActiveChatId, loadHistory],
+  );
 
   const handleSendMessage = async (text: string) => {
     if (!activeChat) return;
@@ -93,14 +119,18 @@ function Chat({ apiClient, credentials, onLogout }: ChatProps) {
       <Sidebar
         chats={chats}
         activeChatId={activeChatId}
-        onSelectChat={setActiveChatId}
+        onSelectChat={handleSelectChat}
         onCreateChat={createChat}
         onLogout={onLogout}
-        onRefresh={loadChats}
+        onRefresh={() => loadChats(true)}
         isLoading={isLoadingChats}
         error={chatsError}
       />
-      <ChatWindow chat={activeChat} onSendMessage={handleSendMessage} />
+      <ChatWindow
+        chat={activeChat}
+        onSendMessage={handleSendMessage}
+        isLoadingHistory={isLoadingHistory}
+      />
     </div>
   );
 }

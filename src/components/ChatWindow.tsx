@@ -5,9 +5,14 @@ import { extractPhone, formatTime } from "@/utils/format";
 interface ChatWindowProps {
   chat: Chat | null;
   onSendMessage: (text: string) => void;
+  isLoadingHistory?: boolean;
 }
 
-function ChatWindow({ chat, onSendMessage }: ChatWindowProps) {
+function ChatWindow({
+  chat,
+  isLoadingHistory,
+  onSendMessage,
+}: ChatWindowProps) {
   const [text, setText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -33,16 +38,18 @@ function ChatWindow({ chat, onSendMessage }: ChatWindowProps) {
 
   return (
     <div className="flex-1 flex flex-col bg-gray-50">
-      {/* Header */}
       <header className="px-6 py-4 bg-white border-b border-gray-200">
         <h2 className="font-semibold text-gray-800">
           {chat.name || `+${extractPhone(chat.id)}`}
         </h2>
       </header>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
-        {chat.messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <p className="text-center text-sm text-gray-400 mt-8">
+            Загрузка истории...
+          </p>
+        ) : chat.messages.length === 0 ? (
           <p className="text-center text-sm text-gray-400 mt-8">
             Сообщений пока нет. Напишите первым!
           </p>
