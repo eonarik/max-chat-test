@@ -1,33 +1,48 @@
+// src/api/greenApi.ts
 import axios, { type AxiosInstance } from "axios";
-
 import type {
   Credentials,
   SendMessageResponse,
   ReceiveNotificationResponse,
   DeleteNotificationResponse,
+  GetStateInstanceResponse,
 } from "../types/greenApi";
-
-const API_URL = "https://api.green-api.com";
 
 export const createApiClient = (credentials: Credentials): AxiosInstance => {
   return axios.create({
-    baseURL: `${API_URL}/waInstance${credentials.idInstance}`,
-    params: {
-      apiTokenInstance: credentials.apiTokenInstance,
-    },
+    baseURL: `/green-api/waInstance${credentials.idInstance}`,
   });
 };
 
+/**
+ * Проверка валидности токенов.
+ * GET /waInstance{id}/getStateInstance/{token}
+ */
+export const getStateInstance = async (
+  credentials: Credentials,
+): Promise<GetStateInstanceResponse> => {
+  const client = createApiClient(credentials);
+  const { data } = await client.get<GetStateInstanceResponse>(
+    `/getStateInstance/${credentials.apiTokenInstance}`,
+  );
+  return data;
+};
+
+/**
+ * Отправка текстового сообщения.
+ * POST /waInstance{id}/sendMessage/{token}
+ */
 export const sendMessage = async (
   client: AxiosInstance,
+  apiTokenInstance: string,
   chatId: string,
   message: string,
 ): Promise<SendMessageResponse> => {
   try {
-    const { data } = await client.post<SendMessageResponse>("/sendMessage", {
-      chatId,
-      message,
-    });
+    const { data } = await client.post<SendMessageResponse>(
+      `/sendMessage/${apiTokenInstance}`,
+      { chatId, message },
+    );
     return data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -37,28 +52,39 @@ export const sendMessage = async (
   }
 };
 
+/**
+ * Получение входящих уведомлений (Long Polling).
+ * GET /waInstance{id}/receiveNotification/{token}
+ */
 export const receiveNotification = async (
   client: AxiosInstance,
+  apiTokenInstance: string,
 ): Promise<ReceiveNotificationResponse | null> => {
   try {
     const { data } = await client.get<ReceiveNotificationResponse>(
-      "/receiveNotification",
+      `/receiveNotification/${apiTokenInstance}`,
     );
     return data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 400) {
+      // Очередь пуста — норма для Long Polling
       return null;
     }
     throw error;
   }
 };
 
+/**
+ * Удаление уведомления из очереди.
+ * DELETE /waInstance{id}/deleteNotification/{receiptId}/{token}
+ */
 export const deleteNotification = async (
   client: AxiosInstance,
+  apiTokenInstance: string,
   receiptId: number,
 ): Promise<DeleteNotificationResponse> => {
   const { data } = await client.delete<DeleteNotificationResponse>(
-    `/deleteNotification/${receiptId}`,
+    `/deleteNotification/${receiptId}/${apiTokenInstance}`,
   );
   return data;
 };

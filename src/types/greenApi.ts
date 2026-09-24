@@ -1,4 +1,5 @@
 export interface Credentials {
+  apiUrl: string;
   idInstance: string;
   apiTokenInstance: string;
 }
@@ -52,9 +53,18 @@ export interface ChatMessage {
 }
 
 export interface Chat {
-  id: string; // chatId (79999999999@c.us)
-  phone: string; // Отображаемый номер
+  id: string;
+  phone: string;
   messages: ChatMessage[];
   lastMessage?: string;
   lastActivity?: number;
+}
+
+export interface GetStateInstanceResponse {
+  stateInstance:
+    | "authorized"
+    | "notAuthorized"
+    | "blocked"
+    | "sleepMode"
+    | "starting";
 }
