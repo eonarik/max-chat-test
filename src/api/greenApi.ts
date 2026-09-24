@@ -6,6 +6,7 @@ import type {
   ReceiveNotificationResponse,
   DeleteNotificationResponse,
   GetStateInstanceResponse,
+  GreenApiChat,
 } from "../types/greenApi";
 
 export const createApiClient = (credentials: Credentials): AxiosInstance => {
@@ -85,6 +86,20 @@ export const deleteNotification = async (
 ): Promise<DeleteNotificationResponse> => {
   const { data } = await client.delete<DeleteNotificationResponse>(
     `/deleteNotification/${receiptId}/${apiTokenInstance}`,
+  );
+  return data;
+};
+
+/**
+ * Получение списка чатов.
+ * GET /waInstance{id}/getChats/{token}
+ */
+export const getChats = async (
+  client: AxiosInstance,
+  apiTokenInstance: string,
+): Promise<GreenApiChat[]> => {
+  const { data } = await client.get<GreenApiChat[]>(
+    `/getChats/${apiTokenInstance}`,
   );
   return data;
 };

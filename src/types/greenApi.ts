@@ -68,3 +68,32 @@ export interface GetStateInstanceResponse {
     | "sleepMode"
     | "starting";
 }
+
+export interface Chat {
+  id: string;
+  phone: string;
+  name?: string;
+  type?: "user" | "group" | "channel" | "bot";
+  phoneNumber?: number;
+  messages: ChatMessage[];
+  lastMessage?: string;
+  lastActivity?: number;
+}
+
+export interface GreenApiChat {
+  chatId: string;
+  name: string;
+  type: "user" | "group" | "channel" | "bot";
+  phoneNumber: number;
+}
+
+export interface ChatHistoryItem {
+  idMessage: string;
+  timestamp: number;
+  type: "incoming" | "outgoing";
+  typeMessage: string;
+  textMessage?: string;
+  chatId: string;
+  senderId?: string;
+  senderName?: string;
+}
