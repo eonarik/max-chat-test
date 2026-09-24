@@ -1,16 +1,74 @@
-# React + Vite
+# MAX Chat — тестовое задание
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Веб-интерфейс для отправки и получения сообщений в мессенджере **MAX** через сервис [GREEN-API](https://green-api.com/max).
 
-Currently, two official plugins are available:
+## Стек
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** + **TypeScript**
+- **Vite** — сборка
+- **Tailwind CSS 3** — стили
+- **Axios** — HTTP-запросы
+- **GREEN-API** — бэкенд-прослойка к MAX
 
-## React Compiler
+## Возможности
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Авторизация по `idInstance` и `apiTokenInstance` с проверкой через `getStateInstance`
+- Загрузка списка чатов (`getChats`) с merge-логикой и сохранением в `localStorage`
+- Создание нового чата по номеру телефона с валидацией
+- Загрузка истории сообщений (`getChatHistory`)
+- Отправка текстовых сообщений (`sendMessage`)
+- **Long Polling** (`receiveNotification` + `deleteNotification`) для получения входящих сообщений в реальном времени
+- Заглушки для не-текстовых сообщений
+- Синхронизация активного чата с URL (`#/chat/:chatId`) — при перезагрузке страницы открывается тот же чат
+- Аватары с цветными градиентами и иконками для ботов
 
-## Expanding the ESLint configuration
+## Установка и запуск
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Требования
+
+- Node.js 18+
+- npm 9+
+
+### Шаги
+
+```bash
+# 1. Клонировать репозиторий
+git clone https://github.com/<ваш-username>/max-chat-test.git
+cd max-chat-test
+
+# 2. Установить зависимости
+npm install
+
+# 3. Запустить dev-сервер
+npm run dev
+```
+
+Приложение откроется на `http://localhost:5173`.
+
+## Сборка для продакшена
+
+```bash
+npm run build
+npm run preview
+```
+
+## Как получить доступы
+
+- Зарегистрируйтесь на green-api.com/max.
+- Создайте инстанс.
+- Авторизуйте его в MAX (сканирование QR-кода, пароль от MAX должен быть выключен).
+
+Скопируйте из личного кабинета:
+
+- apiUrl (например, https://3100.api.green-api.com)
+- idInstance (например, 310022745482)
+- apiTokenInstance
+
+## Известные ограничения
+
+- Работают только текстовые сообщения. Не-текстовые (картинки, видео, голосовые) отображаются как заглушки.
+- История сообщений подгружается только за последние 50 сообщений (параметр count в getChatHistory).
+
+## Лицензия
+
+Тестовое задание, не для продакшна.
